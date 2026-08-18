@@ -9,7 +9,7 @@ for d in docs:
     chunks = chunk_text(d["text"])
     print(f"File: {d['source']} -> {len(chunks)} chunks created")
 
-from app.ingest_simple import get_collection, build_vector_store
+from app.ingest import get_collection, build_vector_store
 
 #3. Create ChromaDB client object
 collection = get_collection()
