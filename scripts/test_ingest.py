@@ -21,7 +21,7 @@ print("Ingested and created a vector DB for", len(docs), "documents")
 #5. (Mono) Query the collection
 results = collection.query(query_texts=["Any rooms available?"], n_results=3)
 
-#6. Loop directly through first query in results
+#6. Loop directly through single query in results
 for i, (doc, meta, dist) in enumerate(zip(results["documents"][0], results["metadatas"][0], results["distances"][0]), start=1):
     print(f"\n[Result {i}]")
     print(f"📁 Source File : {meta.get('source')}")
