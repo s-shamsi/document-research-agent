@@ -6,12 +6,12 @@ app = FastAPI()
 def health():
     return {"status": "ok"}
 
-# from pydantic import BaseModel
-# from app.agent import answer_question
+from pydantic import BaseModel
+from app.agent import answer_question
 
-# class QuestionRequest(BaseModel):
-#     question: str
+class QuestionRequest(BaseModel):
+    question: str
 
-# @app.post("/ask")
-# def ask(req: QuestionRequest):
-#     return answer_question(req.question)
+@app.post("/ask")
+def ask(req: QuestionRequest):
+    return answer_question(req.question)
