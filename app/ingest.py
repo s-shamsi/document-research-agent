@@ -1,5 +1,6 @@
 from pathlib import Path
 from pypdf import PdfReader
+from io import BytesIO
 import chromadb
 
 def load_documents(folder: str) -> list[dict]:
@@ -52,3 +53,24 @@ def build_vector_store(docs: list[dict], persist_dir: str = "chroma_db"):
 
     collection.add(ids=ids, documents=texts, metadatas=metadatas)
     return collection
+
+def embed_uploaded_file(filename: str, content: bytes, content_type: str) -> dict:
+    """
+    Process an uploaded file: decode it, chunk it, embed it.
+    Reuses existing chunk_text() and get_collection() functions.
+    """
+    # Step 1: Decode bytes to text (same logic as load_documents applied to uploaded files)
+    if filename.lower().endswith(".pdf"):
+        reader = PdfReader(BytesIO(content))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    else:
+        text = content.decode("utf-8", errors="ignore")
+    
+    # Step 2: Reuse existing chunking and embedding functions
+    chunks = chunk_text(text)
+    collection = get_collection()
+    ids = [f"{filename}-{i}" for i in range(len(chunks))]
+    metadatas = [{"source": filename, "chunk_index": i} for i in range(len(chunks))]
+    collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+    
+    return {"name": filename, "size": len(content), "type": content_type}
