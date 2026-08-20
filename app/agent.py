@@ -59,19 +59,23 @@ def answer_question(question: str, n_results: int = 3) -> dict:
     return{"answer": response.choices[0].message.content,
            "sources": [s["source"] for s in sources]}
 
-def search_documents(query: str, n_results: int = 4) -> str:
+def search_documents(query: str, n_results: int = 4) -> tuple[str, list[str]]:
     """
     The document search/retrieval function the LLM calls.
-    Input: User Query → ChromaDB Semantic Search → Output: Context for LLM Response
+    Input: User Query 
+    Process: ChromaDB Semantic Search & Source Document Retrieval
+    Output: (Context for LLM Response, list_of_sources)
     """
     collection = get_collection()
     results = collection.query(query_texts=[query], n_results=n_results)
     chunks = results["documents"][0]
     sources = results["metadatas"][0]
-    return "\n\n".join(
+    formatted = "\n\n".join(
         f"[Source: {s['source']}, chunk {s['chunk_index']}]\n{c}"
         for c, s in zip(chunks, sources)
     )
+    source_names = [s["source"] for s in sources]
+    return formatted, source_names
 
 # JSON schema describing the search_tool to Groq.
 search_tool = {
@@ -109,7 +113,8 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
         {"role": "user", "content": question}
         ]
 
-    sources_used = []
+    queries_made = []
+    retrieved_sources = []   # tracks documents retrieved from vectorDB
 
     for step in range(max_steps):
         response = client.chat.completions.create(
@@ -132,14 +137,20 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
                     except json.JSONDecodeError:
                         query_str = ""
 
-                    result_text = search_documents(query_str) if query_str else "Invalid query provided."
-                    if query_str and query_str not in sources_used:
-                        sources_used.append(query_str)
+                    if query_str:
+                        result_text, matched_sources = search_documents(query_str)
+                        if query_str not in queries_made:
+                            queries_made.append(query_str)
+                        for match in matched_sources:
+                            if match not in retrieved_sources:
+                                retrieved_sources.append(match)
+                    else:
+                        result_text = "Invalid query provided."
 
                 else:
                     result_text = "Error: Tool not found."
 
-                # Always append a tool response to prevent API context errors
+                # Append tool response to prevent API context errors
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -150,7 +161,7 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
 
         # Return full response including reasoning blocks
         content = (message.content or "").strip()
-        return {"answer": content, "queries_made": sources_used}
+        return {"answer": content, "queries_made": queries_made, "sources": retrieved_sources}
 
     # Fallback when max steps are reached
     messages.append({
@@ -158,13 +169,13 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
         "content": "You reached the maximum search limit. Answer the question as best as you can using ONLY the tool output provided above."
     })
 
-    final_resp = client.chat.completions.create(
+    final_response = client.chat.completions.create(
         model=MODEL,
         max_tokens=1000,
         messages=messages
     )
 
-    fallback_content = (final_resp.choices[0].message.content or "").strip()
+    fallback_content = (final_response.choices[0].message.content or "").strip()
 
     return {"answer": "Reached max reasoning steps without a final answer. " + fallback_content,
-            "queries_made": sources_used}
+            "queries_made": queries_made, "sources": retrieved_sources}
