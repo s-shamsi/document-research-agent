@@ -1,17 +1,18 @@
-from app.agent import run_agent
+from app.agent import resolve_tools, stream_final_answer
 
-result = run_agent("Is there anything about protons in the documents?")
+question = "Is there anything about protons in the documents?"
+messages, queries_made, retrieved_sources = resolve_tools(question)
+answer = "".join(stream_final_answer(messages))
 
 # Agent Response Check
 print("ANSWER:")
 print(result["answer"])
 print()
-print("QUERIES MADE:", result["queries_made"])
-print("SOURCES RETRIEVED:", result["sources"])
+print("QUERIES MADE:", queries_made)
+print("SOURCES RETRIEVED:", retrieved_sources)
 
 # Basic sanity checks
-assert isinstance(result, dict), "run_agent should return a dict"
-assert "answer" in result and isinstance(result["answer"], str), "answer should be a string"
-assert "queries_made" in result and isinstance(result["queries_made"], list), "queries_made should be a list"
-assert "sources" in result and isinstance(result["sources"], list), "sources should be a list"
+assert isinstance(answer, str) and answer.strip(), "answer should be a non-empty string"
+assert isinstance(queries_made, list), "queries_made should be a list"
+assert isinstance(retrieved_sources, list), "retrieved_sources should be a list"
 print("\nAll structural checks passed.")
