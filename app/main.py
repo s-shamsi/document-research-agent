@@ -1,10 +1,11 @@
-from fastapi import FastAPI, File, UploadFile           # app + file uploads.
-from fastapi.middleware.cors import CORSMiddleware      # lets React frontend call app API 
-from fastapi.responses import PlainTextResponse         # error messages + api.ts compatibility
-from pydantic import BaseModel                          # pydantic class for request schemas
+from fastapi import FastAPI, File, UploadFile                               # app + file uploads.
+from fastapi.middleware.cors import CORSMiddleware                          # lets React frontend call app API 
+from fastapi.responses import PlainTextResponse, StreamingResponse          # error messages + api.ts compatibility
+from pydantic import BaseModel                                              # pydantic class for request schemas
 from dotenv import load_dotenv
-# from app.agent import answer_question
+# from app.agent import answer_question                                     # deprecated 1-shot "agent" response
 from app.ingest import embed_uploaded_file
+from app.agent import resolve_tools, stream_final_answer
 
 load_dotenv()
 app = FastAPI()
@@ -56,16 +57,14 @@ class ResearchRequest(BaseModel):
 @app.post("/api/research")
 def research(req: ResearchRequest):
     """
-    Research endpoint (non-streaming, single LLM call).
+    Research endpoint: runs the agent loop, streams the final answer.
     """
     if not req.request.strip():
         return PlainTextResponse("Request cannot be empty.", status_code=400)
 
     try:
-        # PLACEHOLDER: for now, just return a dummy response.
-        # After Stage 5 practice, this will call the real agent loop.
-        return PlainTextResponse(
-            "This is a placeholder response. "
-        )
+        messages, queries_made, retrieved_sources = resolve_tools(req.request)
     except Exception as e:
         return PlainTextResponse(f"Research failed: {e}", status_code=500)
+
+    return StreamingResponse(stream_final_answer(messages), media_type="text/plain")
