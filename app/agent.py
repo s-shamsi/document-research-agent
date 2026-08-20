@@ -7,11 +7,14 @@
 
 import os
 import textwrap
+import json
+
 from groq import Groq
 from dotenv import load_dotenv
 from app.ingest import get_collection
 
 load_dotenv()
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # MODEL = "llama-3.3-70b-versatile"         #error: model_not_found
 # MODEL = "llama-3.3-70b-specdec"           #error: model_decommissioned
@@ -55,3 +58,34 @@ def answer_question(question: str, n_results: int = 3) -> dict:
 
     return{"answer": response.choices[0].message.content,
            "sources": [s["source"] for s in sources]}
+
+def search_documents(query: str, n_results: int = 4) -> str:
+    """
+    The actual retrieval function the model can call.
+    """
+    collection = get_collection()
+    results = collection.query(query_texts=[query], n_results=n_results)
+    chunks = results["documents"][0]
+    sources = results["metadatas"][0]
+    return "\n\n".join(
+        f"[Source: {s['source']}, chunk {s['chunk_index']}]\n{c}"
+        for c, s in zip(chunks, sources)
+    )
+
+search_tool = {
+    "type": "function",
+    "function": {
+        "name": "search_documents",
+        "description": 
+        """
+        - Search the document collection for relevant passages. 
+        - Call this whenever you need information you don't already have.
+        """,
+        "parameters": {
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "A focused search query"}},
+            "required": ["query"]
+        }
+    }
+}
+
