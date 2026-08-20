@@ -8,7 +8,7 @@
 import os
 import textwrap
 import json
-
+import re
 from groq import Groq
 from dotenv import load_dotenv
 from app.ingest import get_collection
@@ -89,3 +89,75 @@ search_tool = {
     }
 }
 
+
+def run_agent(question: str, max_steps: int = 5) -> dict:
+    messages = [
+        {"role": "system", 
+         "content": ("You are a document research agent. You do not have context initially. "
+                     "Use search_documents to find relevant information before answering. "
+                     "You may search multiple times if the search result is incomplete. "
+                     "Once search results are returned, answer strictly using those results.")},
+        {"role": "user", "content": question}
+        ]
+
+    sources_used = []
+
+    for step in range(max_steps):
+        response = client.chat.completions.create(
+            model=MODEL,
+            max_tokens=1000,
+            tools=[search_tool],
+            messages=messages
+        )
+        message = response.choices[0].message
+
+        # Safely check for tool calls regardless of finish_reason value
+        if message.tool_calls:
+            messages.append(message)
+            for tool_call in message.tool_calls:
+                # Handle unexpected tool names or malformed arguments safely
+                if tool_call.function.name == "search_documents":
+                    try:
+                        args = json.loads(tool_call.function.arguments)
+                        query_str = args.get("query", "")
+                    except json.JSONDecodeError:
+                        query_str = ""
+
+                    result_text = search_documents(query_str) if query_str else "Invalid query provided."
+                    if query_str and query_str not in sources_used:
+                        sources_used.append(query_str)
+
+                else:
+                    result_text = "Error: Tool not found."
+
+                # Always append a tool response to prevent API context errors
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result_text
+                })
+
+            continue
+
+        # Clean reasoning tags from normal response
+        raw_content = message.content or ""
+        clean_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
+        return {"answer": clean_content, "queries_made": sources_used}
+
+    # Fallback when max steps are reached
+    messages.append({
+        "role": "user",
+        "content": "You reached the maximum search limit. Answer the question as best as you can using ONLY the tool output provided above."
+    })
+
+    final_resp = client.chat.completions.create(
+        model=MODEL,
+        max_tokens=1000,
+        messages=messages
+    )
+
+    raw_fallback = final_resp.choices[0].message.content or ""
+    clean_fallback = re.sub(r'<think>.*?</think>', '', raw_fallback, flags=re.DOTALL).strip()
+
+    return {"answer": "Reached max reasoning steps without a final answer. " + clean_fallback,
+            "queries_made": sources_used}
