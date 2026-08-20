@@ -1,14 +1,13 @@
 # Placeholder for agent logic.
 # This will contain:
-# - search_documents()
-# - web_search()
-# - resolve_tools() (the agent loop)
-# - stream_final_answer()
+# - search_documents() ✔️
+# - web_search() ❌
+# - resolve_tools() (the agent loop) ✔️
+# - stream_final_answer() ✔️
 
 import os
 import textwrap
 import json
-import re
 from groq import Groq
 from dotenv import load_dotenv
 from app.ingest import get_collection
@@ -27,7 +26,8 @@ MODEL = "openai/gpt-oss-20b"
 
 def answer_question(question: str, n_results: int = 3) -> dict:
     """
-    Accepts the user's question (as a string) and returns a dictionary (containing the answer) as the output.
+    Input: User Question (str).
+    Output: LLM Response (dict) containing answer and sources.
     """
     collection = get_collection()
     results = collection.query(query_texts = [question], n_results = n_results)
@@ -61,7 +61,8 @@ def answer_question(question: str, n_results: int = 3) -> dict:
 
 def search_documents(query: str, n_results: int = 4) -> str:
     """
-    The actual retrieval function the model can call.
+    The document search/retrieval function the LLM calls.
+    Input: User Query → ChromaDB Semantic Search → Output: Context for LLM Response
     """
     collection = get_collection()
     results = collection.query(query_texts=[query], n_results=n_results)
@@ -72,6 +73,7 @@ def search_documents(query: str, n_results: int = 4) -> str:
         for c, s in zip(chunks, sources)
     )
 
+# JSON schema describing the search_tool to Groq.
 search_tool = {
     "type": "function",
     "function": {
@@ -91,6 +93,13 @@ search_tool = {
 
 
 def run_agent(question: str, max_steps: int = 5) -> dict:
+    """
+    Agent Orchestrator: this is the multi-step (max_steps) ReAct loop.
+    Input: User question (str), max_steps of agent reasoning loop.
+    Output: LLM Agent response (dict) containing answer and sources.
+    Process: Input → messages = [...] records reasoning → Agent Loop OR Fallback Response → Ouput
+    Agent Loop: Context + LLM Response → Check for tool_calls → (possible) tool usage(s) → Loop Answer
+    """
     messages = [
         {"role": "system", 
          "content": ("You are a document research agent. You do not have context initially. "
@@ -139,10 +148,9 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
 
             continue
 
-        # Clean reasoning tags from normal response
-        raw_content = message.content or ""
-        clean_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
-        return {"answer": clean_content, "queries_made": sources_used}
+        # Return full response including reasoning blocks
+        content = (message.content or "").strip()
+        return {"answer": content, "queries_made": sources_used}
 
     # Fallback when max steps are reached
     messages.append({
@@ -156,8 +164,7 @@ def run_agent(question: str, max_steps: int = 5) -> dict:
         messages=messages
     )
 
-    raw_fallback = final_resp.choices[0].message.content or ""
-    clean_fallback = re.sub(r'<think>.*?</think>', '', raw_fallback, flags=re.DOTALL).strip()
+    fallback_content = (final_resp.choices[0].message.content or "").strip()
 
-    return {"answer": "Reached max reasoning steps without a final answer. " + clean_fallback,
+    return {"answer": "Reached max reasoning steps without a final answer. " + fallback_content,
             "queries_made": sources_used}
