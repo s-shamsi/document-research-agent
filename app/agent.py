@@ -3,7 +3,7 @@ import json
 from groq import Groq
 from dotenv import load_dotenv
 from app.ingest import get_collection
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 load_dotenv()
 
