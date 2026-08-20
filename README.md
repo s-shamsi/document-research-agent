@@ -88,7 +88,36 @@ app/
 
 ## Logical Flow
 
+**Upload documents:**
+- user uploads to `POST /api/sources`
+- `ingest.py` extracts text
+- extracted text is chunked
+- text chunks are embedded and stored in ChromaDB
+- documents directory is ready for semantic search
+
+**Answer questions:**
+- user sends research query to `POST /api/research`
+- `agent.py` runs a ReAct loop (`max_steps=5`):
+   - send query & message history to LLM available `tools=[search_tool, web_search_tool]`
+   - LLM decides which tool(s) to call (if at all)
+   - execute tool calls
+   - append tool call history and corresponding results to message history
+   - loop until final_answer OR `max_steps`
+- `stream_final_answer()` re-calls LLM with `stream=True`
+
 ## Evaluation
+
+**Current state:** No automated evaluation harness; tested via ad-hoc smoke tests in `scripts/`.
+
+**What should be tested:**
+
+1. **Retrieval quality** — For document-only questions, does `search_documents` surface the chunks containing the answer? (Precision/recall @k on chunk IDs)
+2. **Answer faithfulness** — Every factual claim in the answer must trace back to a retrieved chunk or web snippet (manual verification or second-LLM pass)
+3. **Citation correctness** — If the model cites a source, does it actually support the claim? (High risk: citations present but wrong)
+4. **Unanswerable refusal** — On questions not answerable from documents or web, does the agent correctly say so instead of guessing? (LLM overconfidence risk)
+5. **Tool call efficiency** — How many steps does each query take? Queries consistently hitting `max_steps=5` signal unclear prompts or tool descriptions.
+
+**Highest priority:** (1) and (4) — bad retrieval and confident hallucinations are the main failure modes for RAG agents.
 
 ## Limitations
 
