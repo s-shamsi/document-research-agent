@@ -107,17 +107,7 @@ app/
 
 ## Evaluation
 
-**Current state:** No automated evaluation harness; tested via ad-hoc smoke tests in `scripts/`.
 
-**What should be tested:**
-
-1. **Retrieval quality** — For document-only questions, does `search_documents` surface the chunks containing the answer? (Precision/recall @k on chunk IDs)
-2. **Answer faithfulness** — Every factual claim in the answer must trace back to a retrieved chunk or web snippet (manual verification or second-LLM pass)
-3. **Citation correctness** — If the model cites a source, does it actually support the claim? (High risk: citations present but wrong)
-4. **Unanswerable refusal** — On questions not answerable from documents or web, does the agent correctly say so instead of guessing? (LLM overconfidence risk)
-5. **Tool call efficiency** — How many steps does each query take? Queries consistently hitting `max_steps=5` signal unclear prompts or tool descriptions.
-
-**Highest priority:** (1) and (4) — bad retrieval and confident hallucinations are the main failure modes for RAG agents.
 
 ## Limitations
 
