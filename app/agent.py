@@ -224,3 +224,23 @@ def stream_final_answer(messages: list[dict]):
         delta = event.choices[0].delta.content
         if delta:
             yield delta
+
+def format_sources_footer(retrieved_sources: list[str]) -> str:
+    """
+    Input: retrieved_sources = [...] from resolve_tools()
+    Output: a footer listing every source (document, URL)
+    """
+    if not retrieved_sources:
+        return ""
+    lines = "\n".join(f"- {s}" for s in retrieved_sources)
+    return f"\n\n---\n**Sources consulted:**\n{lines}\n"
+
+
+def stream_final_answer_with_sources(messages: list[dict], retrieved_sources: list[str]):
+    """
+    Input: messages and retrieved_sources from resolve_tools()
+    Output: streams the model's answer text first, then appends the sources footer
+    Note: kept separate from stream_final_answer() to test text stream.
+    """
+    yield from stream_final_answer(messages)        # "pass through" each chunk as it arrives
+    yield format_sources_footer(retrieved_sources)  # then yield the footer
