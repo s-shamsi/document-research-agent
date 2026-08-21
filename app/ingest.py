@@ -57,7 +57,8 @@ def build_vector_store(docs: list[dict], persist_dir: str = "chroma_db"):
             texts.append(chunk)
             metadatas.append({"source": doc["source"], "chunk_index": i})
 
-    collection.add(ids=ids, documents=texts, metadatas=metadatas)
+    # .upsert() instead of .add() to handle re-uploads
+    collection.upsert(ids=ids, documents=texts, metadatas=metadatas)
     return collection
 
 def embed_uploaded_file(filename: str, content: bytes, content_type: str) -> dict:
@@ -77,6 +78,7 @@ def embed_uploaded_file(filename: str, content: bytes, content_type: str) -> dic
     collection = get_collection()
     ids = [f"{filename}-{i}" for i in range(len(chunks))]
     metadatas = [{"source": filename, "chunk_index": i} for i in range(len(chunks))]
-    collection.add(ids=ids, documents=chunks, metadatas=metadatas)
-    
+
+    # .upsert() instead of .add() to handle re-uploads
+    collection.upsert(ids=ids, documents=chunks, metadatas=metadatas)
     return {"name": filename, "size": len(content), "type": content_type}
