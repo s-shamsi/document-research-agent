@@ -5,7 +5,7 @@ from pydantic import BaseModel                                              # py
 from dotenv import load_dotenv
 # from app.agent import answer_question                                     # deprecated 1-shot "agent" response
 from app.ingest import embed_uploaded_file
-from app.agent import resolve_tools, stream_final_answer
+from app.agent import resolve_tools, stream_final_answer_with_sources
 
 load_dotenv()
 app = FastAPI()
@@ -67,4 +67,5 @@ def research(req: ResearchRequest):
     except Exception as e:
         return PlainTextResponse(f"Research failed: {e}", status_code=500)
 
-    return StreamingResponse(stream_final_answer(messages), media_type="text/plain")
+    return StreamingResponse(stream_final_answer_with_sources(messages, retrieved_sources),
+                             media_type="text/plain")
