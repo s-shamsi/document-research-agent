@@ -3,6 +3,9 @@ from pypdf import PdfReader
 from io import BytesIO
 import chromadb
 
+# create client once at module load time: repeated initialisations waste compute
+_chroma_client = chromadb.PersistentClient(path="chroma_db")
+
 def load_documents(folder: str) -> list[dict]:
     """
     Read all pdf/txt files in a folder, return list of {source, text}.
@@ -23,6 +26,7 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 200) -> list[str
     """
     Split text into overlapping chunks of ~chunk_size characters.
     """
+    assert overlap < chunk_size, "overlap must be less than chunk_size"     # prevents infinite loops.
     chunks = []
     start = 0
     while start < len(text):
@@ -34,9 +38,11 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 200) -> list[str
 def get_collection(persist_dir: str = "chroma_db"):
     """
     Connect to ChromaDB and return the documents collection.
+    Note: persist_dir parameter is ignored since client is singleton at "chroma_db"
     """
-    client = chromadb.PersistentClient(path=persist_dir)
-    return client.get_or_create_collection("documents")
+    # client = chromadb.PersistentClient(path=persist_dir)
+    # return client.get_or_create_collection("documents")
+    return _chroma_client.get_or_create_collection("documents")
 
 def build_vector_store(docs: list[dict], persist_dir: str = "chroma_db"):
     """
