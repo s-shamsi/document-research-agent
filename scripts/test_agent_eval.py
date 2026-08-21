@@ -4,8 +4,9 @@
 - 2 x web_search
 - 4 x document_search & web_search
 """
-
+import time
 from app.agent import resolve_tools, stream_final_answer
+
 
 EVAL_QUESTIONS = {
     "document_only": [
@@ -38,3 +39,5 @@ for category, questions in EVAL_QUESTIONS.items():
         print(f"     Sources: {retrieved_sources}")
         print(f"     Answer (first 250 chars):\n     {answer[:250]}...")
         print()
+
+        time.sleep(3)  # wait 3s between questions to avoid rate limit
