@@ -134,8 +134,10 @@ app/
 
 ## Future Roadmap
 
-- **Unit tests**: Add `pytest`/`pytest-asyncio` tests 
-- **Token-aware chunking**: token-aware chunking preserves document structure better
-- **Conversation memory**: support multi-turn queries so that the agent can reference and utilise searches and responses
+- **Unit tests**: Add `pytest`/`pytest-asyncio` tests.
+- **Token-aware chunking**: token-aware chunking preserves document structure better.
+- **Conversation memory**: support multi-turn queries so that the agent can reference and utilise searches and responses.
 - **Citation validation**: verification method to confirm that cited sources actually support the claims (with judgements handed off to second-LLM).
-- **Upload queuing**: upload queue for ingestion, so `/api/sources` returns immediately with a job ID
+- **Upload queuing**: upload queue for ingestion, so `/api/sources` returns immediately with a job ID.
+- **OOP refactoring**: refactor ingest and agent logic into classes.
+- **Error handling**: Add try-catch blocks with error messages for common failures (invalid PDFs, network timeouts, rate limits).
