@@ -20,6 +20,7 @@ The agent:
 - [Tech Stack](#tech-stack)
 - [Key Files](#key-files)
 - [Logical Flow](#logical-flow)
+- [FrontEnd](#frontend)
 - [Evaluation](#evaluation)
 - [Limitations](#limitations)
 - [Future Roadmap](#future-roadmap)
@@ -104,6 +105,18 @@ app/
    - append tool call history and corresponding results to message history
    - loop until final_answer OR `max_steps`
 - `stream_final_answer()` re-calls LLM with `stream=True`
+
+## FrontEnd
+
+```bash
+git clone <frontend-repo-url>
+cd <frontend-folder>
+npm install
+npm run dev
+```
+- backend runs on `http://localhost:8787`
+- frontend runs on `http://localhost:5173`
+- Confirm the frontend points to that backend URL in `api.ts` 
 
 ## Evaluation
 
