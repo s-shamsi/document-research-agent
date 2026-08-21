@@ -32,7 +32,7 @@ Create the backend component of a research agent to demonstrate your technical s
 
 **Install:**
 ```bash
-pip install fastapi uvicorn python-dotenv pydantic groq ddgs chromadb pypdf
+pip install -r requirements.txt
 ```
 
 **Configure:** Create `.env`:
@@ -65,7 +65,7 @@ Health check: `GET /health`
 { "request": "User question?" }
 ```
 
-**Response:** markdown text stream
+**Response:** markdown text stream with a sources footer listing all retrieved documents and URLs.
 
 ## Tech Stack
 
@@ -107,20 +107,35 @@ app/
 
 ## Evaluation
 
+**To run:**
+```bash
+   python scripts/eval.py
+```
 
+8 questions to test retrieval & generation:
+- 2 x search_tool only calls
+- 2 x web_search_tool only calls
+- 4 x search_tool & web_search_tool mixed calls
+
+ *Note: Requires GROQ_API_KEY and ChromaDB ingestion (run `scripts/test_ingest.py` first).*
+
+**What should be tested:**
+- Retrieval quality: does search output relevant chunks?
+- Response Faithfulness: are the responses rooted in sources?
+- Citation Usage: are cited sources used and reflected in answers?
+- Hallucination Resistance: does agent decline to answer unanswerable questions instead of hallucinating?
 
 ## Limitations
 
-- No persistence guarantees on `chroma_db/` across environments:
-    - local on-disk store, and not backed up 
-    - uploaded documents share one collection
-- No conversation memory:
-    - each `/api/research` call is independent of previous calls
-    - `max_steps=5` in `resolve_tools()` is hard-coded
-- No dynamic management of agent orchestration:
-    - when `n_steps = max_steps = 5`, the agent is forced to output its work, but the user is unaware
-    - `max_steps = N` where $N = f(file_size, query_complexity, user_input)$ 
-    - `tool_calls` are not robustly managed depending on input query and user specifications
-- No retry or result-quality filtering for `web_search()` beyond DDG's default
+- **No multi-user isolation**: all uploaded documents share one ChromaDB collection
+- **No conversation memory**: each `/api/research` call is independent
+- **Fixed `max_steps=5`**: stops mid-loop if exceeded, without signaling the state to the user
+- **No web_search filtering**: results are ranked by DuckDuckGo only
 
 ## Future Roadmap
+
+- **Unit tests**: Add `pytest`/`pytest-asyncio` tests 
+- **Token-aware chunking**: token-aware chunking preserves document structure better
+- **Conversation memory**: support multi-turn queries so that the agent can reference and utilise searches and responses
+- **Citation validation**: verification method to confirm that cited sources actually support the claims (with judgements handed off to second-LLM).
+- **Upload queuing**: upload queue for ingestion, so `/api/sources` returns immediately with a job ID
