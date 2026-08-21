@@ -122,7 +122,7 @@ npm run dev
 
 **To run:**
 ```bash
-   python scripts/eval.py
+   python scripts/test_agent_eval.py
 ```
 
 8 questions to test retrieval & generation:
