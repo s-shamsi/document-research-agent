@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .DS_Store
 chroma_db/
+# Ignore documents directory and chat exports
+documents/*
+*WhatsApp*
+*.zip
