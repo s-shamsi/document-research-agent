@@ -6,7 +6,7 @@ answer = "".join(stream_final_answer(messages))
 
 # Agent Response Check
 print("ANSWER:")
-print(result["answer"])
+print(answer)
 print()
 print("QUERIES MADE:", queries_made)
 print("SOURCES RETRIEVED:", retrieved_sources)
